@@ -9,6 +9,7 @@ import { Globe, Shield, CreditCard, MessageSquare, Bell, User, Truck, ShieldChec
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FeatureIcon, SocialLink, StoreFeature } from '@/types';
+import { DashboardInstallCard } from '@/components/pwa/DashboardInstallCard';
 
 export const GeneralSettings: React.FC = () => {
   const { settings, updateSettings } = useShop();
@@ -534,6 +535,8 @@ export const GeneralSettings: React.FC = () => {
         </div>
 
         <div className="space-y-6">
+          <DashboardInstallCard />
+
           <Card className="border-none shadow-sm rounded-3xl bg-black text-white p-2">
             <CardHeader>
               <CardTitle className="text-lg">Need Help?</CardTitle>
