@@ -371,7 +371,7 @@ export const ProductManagement: React.FC = () => {
                     <ImageIcon size={48} className="opacity-20" />
                   </div>
                 )}
-                <div className="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                <div className="hidden md:flex absolute top-2 right-2 md:top-4 md:right-4 flex-col gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all translate-x-0 md:translate-x-4 md:group-hover:translate-x-0">
                   <Button size="icon" variant="secondary" className="rounded-lg md:rounded-xl shadow-xl h-8 w-8 md:h-10 md:w-10 bg-white/90 backdrop-blur" onClick={() => { setFormData(product); setIsAddingProduct(true); }}>
                     <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
                   </Button>
@@ -384,6 +384,26 @@ export const ProductManagement: React.FC = () => {
                  <div className="flex justify-between items-start mb-1 md:mb-2">
                    <h3 className="font-bold text-[10px] md:text-sm line-clamp-1 flex-1 uppercase tracking-tight">{product.name}</h3>
                    <span className="font-black text-[10px] md:text-sm ml-2">{settings.currencySymbol}{product.price}</span>
+                 </div>
+                 <div className="flex md:hidden gap-2 mb-2">
+                   <Button
+                     size="sm"
+                     variant="secondary"
+                     className="flex-1 rounded-xl h-9 text-[10px] font-black uppercase tracking-widest"
+                     onClick={() => { setFormData(product); setIsAddingProduct(true); }}
+                   >
+                     <Edit2 className="h-3 w-3 mr-1.5" />
+                     Edit
+                   </Button>
+                   <Button
+                     size="sm"
+                     variant="destructive"
+                     className="flex-1 rounded-xl h-9 text-[10px] font-black uppercase tracking-widest"
+                     onClick={() => deleteProduct(product.id)}
+                   >
+                     <Trash2 className="h-3 w-3 mr-1.5" />
+                     Remove
+                   </Button>
                  </div>
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 md:gap-1.5">
