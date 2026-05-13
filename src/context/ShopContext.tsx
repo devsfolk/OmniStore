@@ -321,6 +321,147 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authLoading, setAuthLoading] = useState(hasSupabaseConfig);
   const loading = dataLoading || authLoading;
 
+  const reportSyncSuccess = (message: string) => {
+    console.info(`[OmniStore Sync] ${message}`);
+  };
+
+  const reportSyncError = (message: string, error?: unknown) => {
+    console.error(`[OmniStore Sync] ${message}`, error);
+  };
+
+  const syncCatalogFromSupabase = async () => {
+    if (!supabase) {
+      return;
+    }
+
+    const [settingsResult, categoriesResult, productsResult, reviewsResult] = await Promise.all([
+      supabase.from('store_settings').select('value').eq('id', 'default').maybeSingle(),
+      supabase.from('categories').select('*').order('display_order', { ascending: true }),
+      supabase.from('products').select('*').order('display_order', { ascending: true }),
+      supabase.from('reviews').select('*').order('created_at', { ascending: false }),
+    ]);
+
+    if (settingsResult.error) {
+      reportSyncError('Failed to load store settings from Supabase.', settingsResult.error.message);
+    } else {
+      const rawSettings = (settingsResult.data?.value ?? {}) as Partial<ThemeSettings>;
+      const remoteSettings = mergeSettings(rawSettings);
+      setSettings(remoteSettings);
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(remoteSettings));
+      applyCssVariables(remoteSettings);
+    }
+
+    if (categoriesResult.error) {
+      reportSyncError('Failed to load categories from Supabase.', categoriesResult.error.message);
+    } else {
+      const remoteCategories = (categoriesResult.data ?? []).map(mapCategoryRow);
+      setCategories(remoteCategories);
+      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(remoteCategories));
+    }
+
+    if (productsResult.error) {
+      reportSyncError('Failed to load products from Supabase.', productsResult.error.message);
+    } else {
+      const remoteProducts = (productsResult.data ?? []).map(mapProductRow);
+      setProducts(remoteProducts);
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(remoteProducts));
+    }
+
+    if (reviewsResult.error) {
+      reportSyncError('Failed to load reviews from Supabase.', reviewsResult.error.message);
+    } else {
+      const remoteReviews = (reviewsResult.data ?? []).map(mapReviewRow);
+      setReviews(remoteReviews);
+      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(remoteReviews));
+    }
+  };
+
+  const maybePromoteLocalStoreToSupabase = async () => {
+    if (!supabase) {
+      return;
+    }
+
+    const rawLocalSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const rawLocalCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+    const rawLocalProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+    const rawLocalReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
+
+    if (!rawLocalSettings && !rawLocalCategories && !rawLocalProducts && !rawLocalReviews) {
+      return;
+    }
+
+    const [settingsResult, categoriesResult, productsResult, reviewsResult] = await Promise.all([
+      supabase.from('store_settings').select('value').eq('id', 'default').maybeSingle(),
+      supabase.from('categories').select('id'),
+      supabase.from('products').select('id'),
+      supabase.from('reviews').select('id'),
+    ]);
+
+    if (settingsResult.error || categoriesResult.error || productsResult.error || reviewsResult.error) {
+      reportSyncError('Could not verify current Supabase store state before publishing local data.', {
+        settings: settingsResult.error?.message,
+        categories: categoriesResult.error?.message,
+        products: productsResult.error?.message,
+        reviews: reviewsResult.error?.message,
+      });
+      return;
+    }
+
+    const remoteSettingsIsEmpty = Object.keys((settingsResult.data?.value ?? {}) as Record<string, unknown>).length === 0;
+    const remoteCategoriesEmpty = (categoriesResult.data ?? []).length === 0;
+    const remoteProductsEmpty = (productsResult.data ?? []).length === 0;
+    const remoteReviewsEmpty = (reviewsResult.data ?? []).length === 0;
+
+    try {
+      if (remoteSettingsIsEmpty && rawLocalSettings) {
+        const localSettings = mergeSettings(JSON.parse(rawLocalSettings) as Partial<ThemeSettings>);
+        const { error } = await supabase.from('store_settings').upsert({
+          id: 'default',
+          value: localSettings,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) {
+          throw new Error(`Settings publish failed: ${error.message}`);
+        }
+      }
+
+      if (remoteCategoriesEmpty && rawLocalCategories) {
+        const localCategories = JSON.parse(rawLocalCategories) as Category[];
+        if (localCategories.length > 0) {
+          const { error } = await supabase.from('categories').upsert(localCategories.map(toCategoryRow));
+          if (error) {
+            throw new Error(`Categories publish failed: ${error.message}`);
+          }
+        }
+      }
+
+      if (remoteProductsEmpty && rawLocalProducts) {
+        const localProducts = JSON.parse(rawLocalProducts) as Product[];
+        if (localProducts.length > 0) {
+          const { error } = await supabase.from('products').upsert(localProducts.map(toProductRow));
+          if (error) {
+            throw new Error(`Products publish failed: ${error.message}`);
+          }
+        }
+      }
+
+      if (remoteReviewsEmpty && rawLocalReviews) {
+        const localReviews = JSON.parse(rawLocalReviews) as Review[];
+        if (localReviews.length > 0) {
+          const { error } = await supabase.from('reviews').upsert(localReviews.map(toReviewRow));
+          if (error) {
+            throw new Error(`Reviews publish failed: ${error.message}`);
+          }
+        }
+      }
+
+      await syncCatalogFromSupabase();
+      reportSyncSuccess('Local dashboard data was published to Supabase for all devices.');
+    } catch (error) {
+      reportSyncError('Failed to publish existing local dashboard data to Supabase.', error);
+    }
+  };
+
   const syncOrdersFromSupabase = async () => {
     if (!supabase) {
       return;
@@ -345,11 +486,24 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initialize = async () => {
-      const localSettings = mergeSettings(readLocalJson<Partial<ThemeSettings> | null>(SETTINGS_STORAGE_KEY, null));
-      const localProducts = readLocalJson<Product[]>(PRODUCTS_STORAGE_KEY, SAMPLE_PRODUCTS);
-      const localCategories = readLocalJson<Category[]>(CATEGORIES_STORAGE_KEY, SAMPLE_CATEGORIES);
+      const hasLocalSettings = localStorage.getItem(SETTINGS_STORAGE_KEY) !== null;
+      const hasLocalProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY) !== null;
+      const hasLocalCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY) !== null;
+      const hasLocalReviews = localStorage.getItem(REVIEWS_STORAGE_KEY) !== null;
+
+      const localSettings = mergeSettings(hasLocalSettings ? readLocalJson<Partial<ThemeSettings> | null>(SETTINGS_STORAGE_KEY, null) : null);
+      const localProducts = hasLocalProducts
+        ? readLocalJson<Product[]>(PRODUCTS_STORAGE_KEY, [])
+        : hasSupabaseConfig
+          ? []
+          : SAMPLE_PRODUCTS;
+      const localCategories = hasLocalCategories
+        ? readLocalJson<Category[]>(CATEGORIES_STORAGE_KEY, [])
+        : hasSupabaseConfig
+          ? []
+          : SAMPLE_CATEGORIES;
       const localOrders = readLocalJson<Order[]>(ORDERS_STORAGE_KEY, []);
-      const localReviews = readLocalJson<Review[]>(REVIEWS_STORAGE_KEY, []);
+      const localReviews = hasLocalReviews ? readLocalJson<Review[]>(REVIEWS_STORAGE_KEY, []) : [];
       const localCart = readLocalJson<CartItem[]>(CART_STORAGE_KEY, []);
       const localWishlist = readLocalJson<string[]>(WISHLIST_STORAGE_KEY, []);
 
@@ -369,42 +523,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const [settingsResult, categoriesResult, productsResult, reviewsResult] = await Promise.all([
-          supabase.from('store_settings').select('value').eq('id', 'default').maybeSingle(),
-          supabase.from('categories').select('*').order('display_order', { ascending: true }),
-          supabase.from('products').select('*').order('display_order', { ascending: true }),
-          supabase.from('reviews').select('*').order('created_at', { ascending: false }),
-        ]);
-
-        if (!settingsResult.error && settingsResult.data?.value) {
-          const remoteSettings = mergeSettings({
-            ...localSettings,
-            ...(settingsResult.data.value as Partial<ThemeSettings>),
-          });
-          setSettings(remoteSettings);
-          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(remoteSettings));
-          applyCssVariables(remoteSettings);
-        }
-
-        if (!categoriesResult.error && categoriesResult.data && categoriesResult.data.length > 0) {
-          const remoteCategories = categoriesResult.data.map(mapCategoryRow);
-          setCategories(remoteCategories);
-          localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(remoteCategories));
-        }
-
-        if (!productsResult.error && productsResult.data && productsResult.data.length > 0) {
-          const remoteProducts = productsResult.data.map(mapProductRow);
-          setProducts(remoteProducts);
-          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(remoteProducts));
-        }
-
-        if (!reviewsResult.error && reviewsResult.data) {
-          const remoteReviews = reviewsResult.data.map(mapReviewRow);
-          setReviews(remoteReviews);
-          localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(remoteReviews));
-        }
+        await syncCatalogFromSupabase();
       } catch (error) {
-        console.error('Failed to hydrate storefront data from Supabase:', error);
+        reportSyncError('Failed to hydrate storefront data from Supabase.', error);
       }
     };
 
@@ -429,6 +550,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.setTimeout(() => {
           if (mounted) {
             void syncOrdersFromSupabase();
+            void maybePromoteLocalStoreToSupabase();
           }
         }, 0);
       } else {
@@ -526,11 +648,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applyCssVariables(updated);
 
     if (supabase) {
-      void supabase.from('store_settings').upsert({
-        id: 'default',
-        value: updated,
-        updated_at: new Date().toISOString(),
-      });
+      void (async () => {
+        const { error } = await supabase.from('store_settings').upsert({
+          id: 'default',
+          value: updated,
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          reportSyncError('Failed to save store settings to Supabase.', error.message);
+          return;
+        }
+
+        reportSyncSuccess('Store settings saved to Supabase.');
+      })();
     }
   };
 
@@ -556,7 +687,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase) {
-      void supabase.from('products').insert(toProductRow(newProduct));
+      void (async () => {
+        const { error } = await supabase.from('products').insert(toProductRow(newProduct));
+        if (error) {
+          reportSyncError('Failed to create product in Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Product created in Supabase.');
+      })();
     }
   };
 
@@ -567,7 +705,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase && product) {
-      void supabase.from('products').upsert(toProductRow(product));
+      void (async () => {
+        const { error } = await supabase.from('products').upsert(toProductRow(product));
+        if (error) {
+          reportSyncError('Failed to update product in Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Product updated in Supabase.');
+      })();
     }
   };
 
@@ -577,7 +722,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase) {
-      void supabase.from('products').delete().eq('id', id);
+      void (async () => {
+        const { error } = await supabase.from('products').delete().eq('id', id);
+        if (error) {
+          reportSyncError('Failed to delete product from Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Product removed from Supabase.');
+      })();
     }
   };
 
@@ -588,7 +740,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase) {
-      void supabase.from('categories').insert(toCategoryRow(newCategory));
+      void (async () => {
+        const { error } = await supabase.from('categories').insert(toCategoryRow(newCategory));
+        if (error) {
+          reportSyncError('Failed to create category in Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Category created in Supabase.');
+      })();
     }
   };
 
@@ -599,7 +758,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase && category) {
-      void supabase.from('categories').upsert(toCategoryRow(category));
+      void (async () => {
+        const { error } = await supabase.from('categories').upsert(toCategoryRow(category));
+        if (error) {
+          reportSyncError('Failed to update category in Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Category updated in Supabase.');
+      })();
     }
   };
 
@@ -609,7 +775,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
 
     if (supabase) {
-      void supabase.from('categories').delete().eq('id', id);
+      void (async () => {
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) {
+          reportSyncError('Failed to delete category from Supabase.', error.message);
+          return;
+        }
+        reportSyncSuccess('Category removed from Supabase.');
+      })();
     }
   };
 
