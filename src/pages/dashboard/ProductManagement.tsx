@@ -18,7 +18,8 @@ import {
   X,
   Smartphone,
   Monitor,
-  ChevronLeft
+  ChevronLeft,
+  Star
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -223,6 +224,26 @@ export const ProductManagement: React.FC = () => {
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       className="rounded-2xl min-h-[100px] md:min-h-[150px] text-sm"
                     />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
+                        <Star className={`h-4 w-4 ${formData.isFeatured ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">Show on Homepage</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Mark this as a featured product</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={formData.isFeatured ? 'default' : 'outline'}
+                      className="rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest"
+                      onClick={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
+                    >
+                      {formData.isFeatured ? 'Featured' : 'Not Featured'}
+                    </Button>
                   </div>
                 </div>
 

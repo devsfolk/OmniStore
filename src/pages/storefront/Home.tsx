@@ -11,6 +11,11 @@ export const Home: React.FC = () => {
   const { settings, products, categories, addToCart } = useShop();
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const homepageProducts = React.useMemo(() => {
+    const orderedProducts = [...products].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const featuredProducts = orderedProducts.filter((product) => product.isFeatured);
+    return featuredProducts.length > 0 ? featuredProducts : orderedProducts;
+  }, [products]);
 
   const featureIconMap = {
     truck: Truck,
@@ -274,10 +279,7 @@ export const Home: React.FC = () => {
                 </Link>
               </div>
               <div className={`grid gap-4 md:gap-10`} style={{ gridTemplateColumns: device === 'mobile' ? `repeat(${deviceConfig.productGridCols}, minmax(0, 1fr))` : (deviceConfig.productCardStyle === 'list' ? '1fr' : `repeat(${deviceConfig.productGridCols}, minmax(0, 1fr))`) }}>
-                {products
-                  .filter(p => p.isFeatured)
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map((product, idx) => (
+                {homepageProducts.map((product, idx) => (
                   <motion.div
                     key={product.id}
                     initial={{ opacity: 0, y: 30 }}
