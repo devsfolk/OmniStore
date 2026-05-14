@@ -29,7 +29,7 @@ export const CheckoutPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (mode: 'WHATSAPP' | 'WEBSITE') => {
+  const handleSubmit = async (mode: 'WHATSAPP' | 'WEBSITE') => {
     if (!formData.customerName || !formData.customerPhone || !formData.customerAddress) {
       alert('Please fill in all required fields');
       return;
@@ -40,9 +40,14 @@ export const CheckoutPage: React.FC = () => {
       return;
     }
 
-    placeOrder(formData, mode, paymentMethod);
-    if (mode === 'WEBSITE') {
+    const wasPlaced = await placeOrder(formData, mode, paymentMethod);
+    if (mode === 'WEBSITE' && wasPlaced) {
       setIsSuccess(true);
+      return;
+    }
+
+    if (!wasPlaced) {
+      alert('Your order could not be submitted right now. Please try again.');
     }
   };
 
