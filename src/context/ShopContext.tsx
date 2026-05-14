@@ -9,6 +9,11 @@ interface CartItem extends OrderItem {
   size?: string;
 }
 
+interface PendingWebsiteOrder {
+  order: Order;
+  paymentMethod?: string;
+}
+
 interface ShopContextType {
   settings: ThemeSettings;
   updateSettings: (newSettings: Partial<ThemeSettings>) => void;
@@ -146,6 +151,7 @@ const SETTINGS_STORAGE_KEY = 'omnistore_settings';
 const PRODUCTS_STORAGE_KEY = 'omnistore_products';
 const CATEGORIES_STORAGE_KEY = 'omnistore_categories';
 const ORDERS_STORAGE_KEY = 'omnistore_orders';
+const PENDING_ORDERS_STORAGE_KEY = 'omnistore_pending_orders';
 const REVIEWS_STORAGE_KEY = 'omnistore_reviews';
 const CART_STORAGE_KEY = 'omnistore_cart';
 const WISHLIST_STORAGE_KEY = 'omnistore_wishlist';
@@ -525,6 +531,36 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(remoteOrders));
   };
 
+  const flushPendingOrdersToSupabase = async () => {
+    if (!supabase) {
+      return;
+    }
+
+    const pendingOrders = readLocalJson<PendingWebsiteOrder[]>(PENDING_ORDERS_STORAGE_KEY, []);
+    if (pendingOrders.length === 0) {
+      return;
+    }
+
+    const remainingOrders: PendingWebsiteOrder[] = [];
+
+    for (const pendingOrder of pendingOrders) {
+      const { error } = await supabase
+        .from('orders')
+        .upsert(toOrderRow(pendingOrder.order, pendingOrder.paymentMethod), { onConflict: 'id' });
+
+      if (error) {
+        reportSyncError('Failed to sync website order to Supabase.', error.message);
+        remainingOrders.push(pendingOrder);
+      }
+    }
+
+    localStorage.setItem(PENDING_ORDERS_STORAGE_KEY, JSON.stringify(remainingOrders));
+
+    if (remainingOrders.length !== pendingOrders.length) {
+      reportSyncSuccess('Website orders synced to Supabase.');
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       const hasLocalSettings = localStorage.getItem(SETTINGS_STORAGE_KEY) !== null;
@@ -565,6 +601,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         await syncCatalogFromSupabase();
+        await flushPendingOrdersToSupabase();
       } catch (error) {
         reportSyncError('Failed to hydrate storefront data from Supabase.', error);
       }
@@ -644,6 +681,34 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       window.clearInterval(intervalId);
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    const handleOnline = () => {
+      void flushPendingOrdersToSupabase();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void flushPendingOrdersToSupabase();
+
+        if (isAdmin) {
+          void syncOrdersFromSupabase();
+        }
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isAdmin]);
 
@@ -988,9 +1053,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProducts(updatedProducts);
       localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updatedProducts));
+      localStorage.setItem(
+        PENDING_ORDERS_STORAGE_KEY,
+        JSON.stringify([
+          ...readLocalJson<PendingWebsiteOrder[]>(PENDING_ORDERS_STORAGE_KEY, []).filter((entry) => entry.order.id !== newOrder.id),
+          { order: newOrder, paymentMethod },
+        ]),
+      );
 
       if (supabase) {
-        void supabase.from('orders').insert(toOrderRow(newOrder, paymentMethod));
+        void flushPendingOrdersToSupabase();
         void Promise.all(
           updatedProducts.map((product) => supabase.from('products').update({ stock: product.stock }).eq('id', product.id)),
         );

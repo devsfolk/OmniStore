@@ -109,7 +109,11 @@ export const OrderTrackingPage: React.FC = () => {
             type="submit"
             disabled={isSearching}
             className="rounded-xl px-8 font-black uppercase tracking-widest"
-            style={{ backgroundColor: settings.primaryColor }}
+            style={{
+              backgroundColor: settings.primaryColor,
+              color: 'var(--primary-foreground)',
+              borderColor: 'var(--primary-border)',
+            }}
           >
             {isSearching ? 'Tracking...' : 'Track'}
           </Button>

@@ -195,7 +195,11 @@ export const CheckoutPage: React.FC = () => {
                 <Button 
                   size="lg" 
                   className="h-16 rounded-2xl font-bold flex flex-col items-center justify-center gap-1"
-                  style={{ backgroundColor: settings.primaryColor }}
+                  style={{
+                    backgroundColor: settings.primaryColor,
+                    color: 'var(--primary-foreground)',
+                    borderColor: 'var(--primary-border)',
+                  }}
                   onClick={() => handleSubmit('WEBSITE')}
                 >
                   <ShoppingBag className="h-5 w-5" />

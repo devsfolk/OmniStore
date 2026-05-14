@@ -120,7 +120,11 @@ export const CategoryPage: React.FC = () => {
               <Button 
                 size="icon" 
                 className={`${isDevsFolk && device === 'mobile' ? 'h-8 w-8' : 'h-10 w-10 md:h-12 md:w-12'} rounded-full shadow-2xl hover:scale-110 transition-transform`}
-                style={{ backgroundColor: settings.primaryColor }}
+                style={{
+                  backgroundColor: settings.primaryColor,
+                  color: 'var(--primary-foreground)',
+                  borderColor: 'var(--primary-border)',
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

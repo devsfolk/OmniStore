@@ -23,7 +23,14 @@ export const WishlistPage: React.FC = () => {
         <h1 className="text-3xl font-black uppercase tracking-tight mb-4">Your Wishlist is Empty</h1>
         <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] mb-8">Save items you love to find them later.</p>
         <Link to="/categories">
-          <Button className="rounded-2xl px-12 h-14 font-black uppercase tracking-widest shadow-xl" style={{ backgroundColor: settings.primaryColor }}>
+          <Button
+            className="rounded-2xl px-12 h-14 font-black uppercase tracking-widest shadow-xl"
+            style={{
+              backgroundColor: settings.primaryColor,
+              color: 'var(--primary-foreground)',
+              borderColor: 'var(--primary-border)',
+            }}
+          >
             Start Shopping
           </Button>
         </Link>
@@ -74,7 +81,11 @@ export const WishlistPage: React.FC = () => {
                   </Link>
                   <Button 
                     className="flex-1 h-12 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg"
-                    style={{ backgroundColor: settings.primaryColor }}
+                    style={{
+                      backgroundColor: settings.primaryColor,
+                      color: 'var(--primary-foreground)',
+                      borderColor: 'var(--primary-border)',
+                    }}
                     onClick={() => addToCart(product)}
                   >
                     Add to Cart

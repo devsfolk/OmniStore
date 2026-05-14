@@ -214,7 +214,11 @@ export const Home: React.FC = () => {
                   <Button 
                     size={device === 'mobile' ? 'sm' : 'lg'} 
                     className={`${device === 'mobile' ? 'h-10 px-6 text-[10px]' : 'h-14 px-10 text-lg'} rounded-full font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-transform`}
-                    style={{ backgroundColor: settings.primaryColor }}
+                    style={{
+                      backgroundColor: settings.primaryColor,
+                      color: 'var(--primary-foreground)',
+                      borderColor: 'var(--primary-border)',
+                    }}
                   >
                     {config.buttonText || "Shop Collection"} <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
                   </Button>
@@ -322,7 +326,11 @@ export const Home: React.FC = () => {
                         <Button 
                           size="icon" 
                           className="h-10 w-10 md:h-12 md:w-12 rounded-full shadow-2xl hover:scale-110 transition-transform"
-                          style={{ backgroundColor: settings.primaryColor }}
+                          style={{
+                            backgroundColor: settings.primaryColor,
+                            color: 'var(--primary-foreground)',
+                            borderColor: 'var(--primary-border)',
+                          }}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -356,7 +364,15 @@ export const Home: React.FC = () => {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto">
                     <Input placeholder="Enter email..." className={`${isDevsFolk && device === 'mobile' ? 'h-10 rounded-xl' : 'h-16 rounded-full'} px-4 md:px-8 text-sm md:text-lg border-none bg-white shadow-sm`} />
-                    <Button size="lg" className={`${isDevsFolk && device === 'mobile' ? 'h-10 rounded-xl px-6' : 'h-16 rounded-full px-10'} text-sm md:text-lg font-bold shadow-lg`} style={{ backgroundColor: settings.primaryColor }}>
+                    <Button
+                      size="lg"
+                      className={`${isDevsFolk && device === 'mobile' ? 'h-10 rounded-xl px-6' : 'h-16 rounded-full px-10'} text-sm md:text-lg font-bold shadow-lg`}
+                      style={{
+                        backgroundColor: settings.primaryColor,
+                        color: 'var(--primary-foreground)',
+                        borderColor: 'var(--primary-border)',
+                      }}
+                    >
                       Join
                     </Button>
                   </div>

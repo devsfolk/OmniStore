@@ -254,7 +254,11 @@ export const ProductPage: React.FC = () => {
                     size="lg" 
                     disabled={product.stock <= 0}
                     className={`${isDevsFolk && device === 'mobile' ? 'h-10 text-[10px]' : 'h-14 text-lg'} flex-1 rounded-xl md:rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2`}
-                    style={{ backgroundColor: settings.primaryColor }}
+                    style={{
+                      backgroundColor: settings.primaryColor,
+                      color: 'var(--primary-foreground)',
+                      borderColor: 'var(--primary-border)',
+                    }}
                     onClick={() => addToCart(product, undefined, quantity, { color: selectedColor, size: selectedSize })}
                   >
                     <ShoppingBag className="h-3.5 w-3.5 md:h-6 md:w-6" />
@@ -358,7 +362,15 @@ export const ProductPage: React.FC = () => {
                         onChange={(e) => setReviewComment(e.target.value)}
                         className="bg-white rounded-xl border-gray-200 min-h-[100px]" 
                      />
-                     <Button type="submit" className="w-full rounded-xl font-bold uppercase tracking-widest text-xs h-11" style={{ backgroundColor: settings.primaryColor }}>
+                     <Button
+                        type="submit"
+                        className="w-full rounded-xl font-bold uppercase tracking-widest text-xs h-11"
+                        style={{
+                           backgroundColor: settings.primaryColor,
+                           color: 'var(--primary-foreground)',
+                           borderColor: 'var(--primary-border)',
+                        }}
+                     >
                         Submit Review
                      </Button>
                   </form>
@@ -422,7 +434,11 @@ export const ProductPage: React.FC = () => {
                     <Button 
                       size="icon" 
                       className="h-8 w-8 md:h-10 md:w-10 rounded-full shadow-xl"
-                      style={{ backgroundColor: settings.primaryColor }}
+                      style={{
+                        backgroundColor: settings.primaryColor,
+                        color: 'var(--primary-foreground)',
+                        borderColor: 'var(--primary-border)',
+                      }}
                       onClick={(e) => {
                         e.preventDefault(); e.stopPropagation();
                         addToCart(p, undefined, 1);
