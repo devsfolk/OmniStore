@@ -28,7 +28,7 @@ interface ShopContextType {
   removeFromCart: (productId: string, variantId?: string) => void;
   updateCartQuantity: (productId: string, variantId: string | undefined, quantity: number) => void;
   clearCart: () => void;
-  placeOrder: (customerData: Omit<Order, 'id' | 'items' | 'total' | 'status' | 'createdAt'>, mode: 'WHATSAPP' | 'WEBSITE', paymentMethod?: string) => Promise<boolean>;
+  placeOrder: (customerData: Omit<Order, 'id' | 'items' | 'total' | 'status' | 'createdAt'>, mode: 'WHATSAPP' | 'WEBSITE', paymentMethod?: string) => void;
   cartTotal: number;
   loading: boolean;
   reviews: Review[];
@@ -597,15 +597,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const channel = supabase
-      .channel('dashboard-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        void syncOrdersFromSupabase();
-      })
-      .subscribe();
+    const intervalId = window.setInterval(() => {
+      void syncOrdersFromSupabase();
+    }, 5000);
 
     return () => {
-      void supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
     };
   }, [isAdmin]);
 
@@ -925,11 +922,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAdmin(false);
   };
 
-  const placeOrder = async (
+  const placeOrder = (
     customerData: Omit<Order, 'id' | 'items' | 'total' | 'status' | 'createdAt'>,
     mode: 'WHATSAPP' | 'WEBSITE',
     paymentMethod?: string,
-  ): Promise<boolean> => {
+  ) => {
     const newOrder: Order = {
       id: createId('ord'),
       ...customerData,
@@ -952,27 +949,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updatedProducts));
 
       if (supabase) {
-        const { error } = await supabase.from('orders').insert(toOrderRow(newOrder, paymentMethod));
-        if (error) {
-          reportSyncError('Failed to save order to Supabase.', error.message);
-          setOrders(orders);
-          setProducts(products);
-          localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
-          return false;
-        }
-
+        void supabase.from('orders').insert(toOrderRow(newOrder, paymentMethod));
+        void Promise.all(
+          updatedProducts.map((product) => supabase.from('products').update({ stock: product.stock }).eq('id', product.id)),
+        );
         if (isAdmin) {
-          const stockUpdateResults = await Promise.all(
-            updatedProducts.map((product) => supabase.from('products').update({ stock: product.stock }).eq('id', product.id)),
-          );
-
-          const stockUpdateError = stockUpdateResults.find((result) => result.error)?.error;
-          if (stockUpdateError) {
-            reportSyncError('Order was saved, but product stock could not be updated in Supabase.', stockUpdateError.message);
-          }
-
-          await syncOrdersFromSupabase();
+          void syncOrdersFromSupabase();
         }
       }
     }
@@ -986,7 +968,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     clearCart();
-    return true;
   };
 
   const value = useMemo(
