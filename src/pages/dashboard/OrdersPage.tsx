@@ -7,8 +7,20 @@ import { ShoppingBag, Eye, CheckCircle, XCircle, Clock, ChevronLeft } from 'luci
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export const OrdersPage: React.FC = () => {
-  const { orders, settings, updateOrderStatus } = useShop();
+  const { orders, settings, updateOrderStatus, refreshOrders } = useShop();
   const [selectedOrder, setSelectedOrder] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    void refreshOrders();
+
+    const intervalId = window.setInterval(() => {
+      void refreshOrders();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [refreshOrders]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

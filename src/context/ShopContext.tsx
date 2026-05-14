@@ -28,6 +28,7 @@ interface ShopContextType {
   deleteCategory: (id: string) => void;
   orders: Order[];
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  refreshOrders: () => Promise<void>;
   cart: CartItem[];
   addToCart: (product: Product, variant?: ProductVariant, quantity?: number, options?: { color?: string; size?: string }) => void;
   removeFromCart: (productId: string, variantId?: string) => void;
@@ -192,6 +193,15 @@ const normalizeHexColor = (value: string) => {
   return null;
 };
 
+const sanitizeColorValue = (value: string | undefined, fallback: string) => {
+  if (!value) {
+    return fallback;
+  }
+
+  const normalized = normalizeHexColor(value);
+  return normalized ? `#${normalized}` : fallback;
+};
+
 const getPrimaryContrastColor = (value: string) => {
   const normalized = normalizeHexColor(value);
   if (!normalized) {
@@ -223,6 +233,9 @@ const applyCssVariables = (updated: ThemeSettings) => {
 const mergeSettings = (raw?: Partial<ThemeSettings> | null): ThemeSettings => ({
   ...DEFAULT_SETTINGS,
   ...raw,
+  primaryColor: sanitizeColorValue(raw?.primaryColor, DEFAULT_SETTINGS.primaryColor),
+  secondaryColor: sanitizeColorValue(raw?.secondaryColor, DEFAULT_SETTINGS.secondaryColor),
+  backgroundColor: sanitizeColorValue(raw?.backgroundColor, DEFAULT_SETTINGS.backgroundColor),
   paymentSettings: {
     ...DEFAULT_SETTINGS.paymentSettings,
     ...(raw?.paymentSettings || {}),
@@ -1098,6 +1111,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteCategory,
       orders,
       updateOrderStatus,
+      refreshOrders: syncOrdersFromSupabase,
       cart,
       addToCart,
       removeFromCart,
