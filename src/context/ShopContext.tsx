@@ -555,21 +555,30 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const remainingOrders: PendingWebsiteOrder[] = [];
+    let syncedAnyOrders = false;
 
     for (const pendingOrder of pendingOrders) {
       const { error } = await supabase
         .from('orders')
-        .upsert(toOrderRow(pendingOrder.order, pendingOrder.paymentMethod), { onConflict: 'id' });
+        .insert(toOrderRow(pendingOrder.order, pendingOrder.paymentMethod));
 
       if (error) {
+        if (error.code === '23505') {
+          syncedAnyOrders = true;
+          continue;
+        }
+
         reportSyncError('Failed to sync website order to Supabase.', error.message);
         remainingOrders.push(pendingOrder);
+        continue;
       }
+
+      syncedAnyOrders = true;
     }
 
     localStorage.setItem(PENDING_ORDERS_STORAGE_KEY, JSON.stringify(remainingOrders));
 
-    if (remainingOrders.length !== pendingOrders.length) {
+    if (syncedAnyOrders) {
       reportSyncSuccess('Website orders synced to Supabase.');
     }
   };
