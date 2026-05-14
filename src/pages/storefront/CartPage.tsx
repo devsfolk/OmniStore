@@ -115,8 +115,12 @@ export const CartPage: React.FC = () => {
 
             <Button 
               size="lg" 
-              className="w-full h-12 md:h-14 rounded-2xl font-black text-xs md:text-lg uppercase tracking-widest shadow-xl"
-              style={{ backgroundColor: settings.primaryColor }}
+              className="w-full h-12 md:h-14 rounded-2xl border font-black text-xs md:text-lg uppercase tracking-widest shadow-xl"
+              style={{
+                backgroundColor: settings.primaryColor,
+                color: 'var(--primary-foreground)',
+                borderColor: 'var(--primary-border)',
+              }}
               onClick={handleCheckout}
             >
               Proceed to Checkout

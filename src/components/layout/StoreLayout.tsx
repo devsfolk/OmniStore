@@ -180,7 +180,14 @@ export const StoreLayout: React.FC<{ children: React.ReactNode }> = ({ children 
               <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 md:h-10 md:w-10">
                 <ShoppingCart className="h-5 w-5 md:h-6 md:w-6" />
                 {cart.length > 0 && (
-                  <span className="absolute top-0 right-0 w-4 h-4 md:w-5 md:h-5 rounded-full text-[9px] md:text-[10px] font-bold flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: settings.primaryColor }}>
+                  <span
+                    className="absolute top-0 right-0 w-4 h-4 md:w-5 md:h-5 rounded-full border text-[9px] md:text-[10px] font-bold flex items-center justify-center shadow-lg"
+                    style={{
+                      backgroundColor: settings.primaryColor,
+                      color: 'var(--primary-foreground)',
+                      borderColor: 'var(--primary-border)',
+                    }}
+                  >
                     {cart.reduce((acc, item) => acc + item.quantity, 0)}
                   </span>
                 )}
@@ -265,7 +272,14 @@ export const StoreLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             <ShoppingCart className="h-5 w-5" />
             <span className="text-[10px]">Cart</span>
             {cart.length > 0 && (
-              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[10px] font-medium text-white translate-x-1 -translate-y-1">
+              <span
+                className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-medium translate-x-1 -translate-y-1"
+                style={{
+                  backgroundColor: settings.primaryColor,
+                  color: 'var(--primary-foreground)',
+                  borderColor: 'var(--primary-border)',
+                }}
+              >
                 {cart.reduce((acc, item) => acc + item.quantity, 0)}
               </span>
             )}

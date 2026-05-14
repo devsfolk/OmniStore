@@ -165,8 +165,49 @@ const readLocalJson = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const normalizeHexColor = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('#')) {
+    return null;
+  }
+
+  const hex = trimmed.slice(1);
+  if (hex.length === 3) {
+    return hex
+      .split('')
+      .map((char) => char + char)
+      .join('');
+  }
+
+  if (hex.length === 6) {
+    return hex;
+  }
+
+  return null;
+};
+
+const getPrimaryContrastColor = (value: string) => {
+  const normalized = normalizeHexColor(value);
+  if (!normalized) {
+    return '#ffffff';
+  }
+
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+
+  return brightness >= 160 ? '#111111' : '#ffffff';
+};
+
+const getPrimaryBorderColor = (value: string) => {
+  return getPrimaryContrastColor(value) === '#111111' ? 'rgba(17, 17, 17, 0.16)' : 'rgba(255, 255, 255, 0.24)';
+};
+
 const applyCssVariables = (updated: ThemeSettings) => {
   document.documentElement.style.setProperty('--primary', updated.primaryColor);
+  document.documentElement.style.setProperty('--primary-foreground', getPrimaryContrastColor(updated.primaryColor));
+  document.documentElement.style.setProperty('--primary-border', getPrimaryBorderColor(updated.primaryColor));
   document.documentElement.style.setProperty('--secondary', updated.secondaryColor);
   document.documentElement.style.setProperty('--background', updated.backgroundColor);
   document.documentElement.style.setProperty('--font-sans', updated.fontSans);

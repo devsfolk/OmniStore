@@ -11,6 +11,8 @@
 
 :root {
   --primary: #000000;
+  --primary-foreground: #ffffff;
+  --primary-border: rgba(255, 255, 255, 0.24);
   --secondary: #6366f1;
   --background: #ffffff;
   --font-sans: "Inter";
